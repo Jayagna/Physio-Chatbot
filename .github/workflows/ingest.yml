@@ -1,8 +1,15 @@
-# One-click knowledge-base indexing: Actions → "Index textbook" → Run workflow.
+# Knowledge-base indexing: Actions → "Index textbook" → Run workflow.
 # Needs repository secrets GOOGLE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
+#
+# The Gemini free tier allows about 1,000 embeddings a day, shared with the
+# chatbot's questions. Each run embeds at most `limit` new chunks and resumes
+# where the last one stopped; the daily schedule finishes a large book over a
+# few days and does nothing once everything is stored.
 name: Index textbook
 
 on:
+  schedule:
+    - cron: "30 8 * * *" # 14:00 IST, after the free quota resets
   workflow_dispatch:
     inputs:
       pdf:
@@ -11,10 +18,13 @@ on:
       source:
         description: Name shown in citations
         default: "Tidy's Physiotherapy"
+      limit:
+        description: Most chunks to embed in this run (leave room for the chatbot's questions)
+        default: "800"
       replace:
-        description: Delete this source's old chunks first
+        description: Delete this source's chunks and start over
         type: boolean
-        default: true
+        default: false
 
 jobs:
   ingest:
@@ -32,10 +42,12 @@ jobs:
           GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          PDF: ${{ inputs.pdf }}
-          SOURCE: ${{ inputs.source }}
-          REPLACE: ${{ inputs.replace }}
+          # Scheduled runs have no inputs, so fall back to the defaults.
+          PDF: ${{ inputs.pdf || 'Sources/Tidy''s Physiotherapy.pdf' }}
+          SOURCE: ${{ inputs.source || 'Tidy''s Physiotherapy' }}
+          LIMIT: ${{ inputs.limit || '800' }}
+          REPLACE: ${{ inputs.replace || false }}
         run: |
-          args=("$PDF" --source "$SOURCE")
-          if [ "$REPLACE" = "true" ]; then args+=(--replace); fi
+          args=("$PDF" --source "$SOURCE" --limit "$LIMIT")
+          if [ "$REPLACE" = "true" ]; then args+=(--replace); else args+=(--resume); fi
           python -m physiobot.ingest "${args[@]}"

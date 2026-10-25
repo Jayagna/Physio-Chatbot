@@ -27,3 +27,29 @@ def test_embed_documents_batches_and_returns_one_vector_per_chunk(monkeypatch):
     assert len(vectors) == 150
     assert [len(c) for c in calls] == [100, 50]
     assert calls[0][0].parts[0].text == "title: Book | text: chunk 0"
+
+
+def test_daily_quota_stops_without_retrying():
+    import pytest
+    from google.genai import errors
+
+    from physiobot.embeddings import DailyQuotaExceeded
+
+    calls = []
+
+    class Models:
+        def embed_content(self, model, contents, config):
+            calls.append(1)
+            raise errors.ClientError(
+                429,
+                {"error": {"code": 429, "status": "RESOURCE_EXHAUSTED",
+                           "message": "quotaId EmbedContentRequestsPerDayPerUserPerProjectPerModel-FreeTier"}},
+            )
+
+    embedder = Embedder.__new__(Embedder)
+    embedder.client = SimpleNamespace(models=Models())
+    embedder.model = "gemini-embedding-2"
+    embedder.config = None
+    with pytest.raises(DailyQuotaExceeded):
+        embedder.embed_query("knee pain")
+    assert calls == [1]

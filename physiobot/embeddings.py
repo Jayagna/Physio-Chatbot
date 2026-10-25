@@ -13,6 +13,10 @@ from .config import get_settings
 BATCH_SIZE = 100
 
 
+class DailyQuotaExceeded(RuntimeError):
+    """The free tier's per-day request quota is used up; retrying today won't help."""
+
+
 def query_text(question: str) -> str:
     return f"task: question answering | query: {question}"
 
@@ -47,7 +51,9 @@ class Embedder:
                 )
                 break
             except errors.APIError as e:
-                # Free-tier quotas are per minute: back off and retry on 429/503.
+                if e.code == 429 and "perday" in str(e).lower().replace(" ", ""):
+                    raise DailyQuotaExceeded(str(e)) from e
+                # Per-minute limits clear quickly: back off and retry on 429/503.
                 if e.code not in (429, 503) or attempt == retries:
                     raise
                 time.sleep(min(60, 2 ** (attempt + 2)))
