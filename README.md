@@ -83,7 +83,10 @@ curl -X POST localhost:8000/chat -H 'content-type: application/json' \
 ### Build the knowledge base (once)
 
 1. In the Supabase SQL editor, run [`sql/documents.sql`](sql/documents.sql).
-2. Index the PDF. It has about 3,100 chunks, and takes a few minutes on the free Gemini tier:
+2. Index the PDF. It has about 3,100 chunks, and takes a few minutes on the free Gemini tier.
+   **Easiest:** add the repository secrets `GOOGLE_API_KEY`, `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
+   (Settings → Secrets and variables → Actions), then open **Actions → Index textbook → Run workflow**.
+   Or run it locally:
 
    ```bash
    python -m physiobot.ingest "Sources/Tidy's Physiotherapy.pdf" --source "Tidy's Physiotherapy"
