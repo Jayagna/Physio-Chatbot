@@ -26,6 +26,12 @@ def _batches(items: list[str], size: int) -> Iterator[list[str]]:
         yield items[i : i + size]
 
 
+def _as_contents(texts: list[str]) -> list[types.Content]:
+    # gemini-embedding-2 merges a list of plain strings into ONE content and
+    # returns a single aggregated vector. One Content per text keeps them apart.
+    return [types.Content(role="user", parts=[types.Part(text=s)]) for s in texts]
+
+
 class Embedder:
     def __init__(self, client: genai.Client | None = None):
         settings = get_settings()
@@ -36,7 +42,9 @@ class Embedder:
     def _embed(self, texts: list[str], retries: int = 10) -> list[list[float]]:
         for attempt in range(retries + 1):
             try:
-                response = self.client.models.embed_content(model=self.model, contents=texts, config=self.config)
+                response = self.client.models.embed_content(
+                    model=self.model, contents=_as_contents(texts), config=self.config
+                )
                 break
             except errors.APIError as e:
                 # Free-tier quotas are per minute: back off and retry on 429/503.
