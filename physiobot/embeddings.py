@@ -33,7 +33,7 @@ class Embedder:
         self.model = settings.embedding_model
         self.config = types.EmbedContentConfig(output_dimensionality=settings.embedding_dim)
 
-    def _embed(self, texts: list[str], retries: int = 5) -> list[list[float]]:
+    def _embed(self, texts: list[str], retries: int = 10) -> list[list[float]]:
         for attempt in range(retries + 1):
             try:
                 response = self.client.models.embed_content(model=self.model, contents=texts, config=self.config)
