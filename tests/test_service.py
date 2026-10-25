@@ -66,7 +66,7 @@ def test_answer_runs_rag_pipeline_with_history():
     assert roles == ["user", "model", "user"]
     prompt = call["contents"][-1].parts[0].text
     assert "[2] (Tidy's Physiotherapy, page 121)" in prompt
-    assert "Nistha Physiotherapy" in call["config"].system_instruction
+    assert "Nishtha Physiotherapy" in call["config"].system_instruction
 
 
 def test_red_flag_skips_llm():

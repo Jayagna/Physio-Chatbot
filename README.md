@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/tests-pytest-0A9EDC?logo=pytest&logoColor=white" alt="pytest">
 </p>
 
-PhysioBOT answers patients' physiotherapy questions on the website of **Nistha Physiotherapy** (Surat, Gujarat).
+PhysioBOT answers patients' physiotherapy questions on the website of **Nishtha Physiotherapy** (Surat, Gujarat).
 Answers are grounded in a physiotherapy textbook, cite their sources, and come back in the patient's own
 language: English, Gujarati or Hindi. Questions that describe emergency symptoms skip the language model
 entirely and get a fixed referral message.
