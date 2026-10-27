@@ -2,7 +2,8 @@
 # Needs repository secrets GOOGLE_API_KEY, SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
 #
 # The Gemini free tier allows about 1,000 embeddings a day, shared with the
-# chatbot's questions. Each run embeds at most `limit` new chunks and resumes
+# chatbot's questions. Runs embed at most `limit` new chunks per quota day (even
+# if GitHub delays a scheduled run onto the same day as a manual one) and resume
 # where the last one stopped; the daily schedule finishes a large book over a
 # few days and does nothing once everything is stored.
 name: Index textbook
@@ -19,7 +20,7 @@ on:
         description: Name shown in citations
         default: "Tidy's Physiotherapy"
       limit:
-        description: Most chunks to embed in this run (leave room for the chatbot's questions)
+        description: Most chunks to embed per Gemini quota day (leave room for the chatbot's questions)
         default: "800"
       replace:
         description: Delete this source's chunks and start over
