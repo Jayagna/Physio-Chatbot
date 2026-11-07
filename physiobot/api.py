@@ -16,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 from .config import get_settings
+from .agent import PhysioAgent
 from .service import PhysioBot, Turn
 
 logging.basicConfig(level=logging.INFO)
@@ -52,6 +53,10 @@ class ChatResponse(BaseModel):
     urgent: bool = False
 
 
+class AgentChatResponse(ChatResponse):
+    tools_used: list[str] = []
+
+
 class RateLimiter:
     """Sliding one-minute window per client IP. Enough for a single free instance."""
 
@@ -76,6 +81,12 @@ limiter = RateLimiter(settings.rate_limit_per_minute)
 @lru_cache
 def get_bot() -> PhysioBot:
     return PhysioBot()
+
+
+@lru_cache
+def get_agent() -> PhysioAgent:
+    bot = get_bot()
+    return PhysioAgent(embedder=bot.embedder, retriever=bot.retriever)
 
 
 def client_ip(request: Request) -> str:
@@ -108,3 +119,24 @@ def chat(body: ChatRequest, request: Request, bot: PhysioBot = Depends(get_bot))
         log.exception("chat failed")
         raise HTTPException(status_code=502, detail="The assistant is unavailable right now.") from None
     return ChatResponse(answer=result.answer, sources=[Source(**s) for s in result.sources], urgent=result.urgent)
+
+
+@app.post("/agent/chat", response_model=AgentChatResponse)
+def agent_chat(body: ChatRequest, request: Request) -> AgentChatResponse:
+    """Experimental: the tool-calling agent. Off unless AGENT_MODE=1, so the website keeps using /chat."""
+    if not settings.agent_mode:
+        raise HTTPException(status_code=404, detail="Not found")
+    if not limiter.allow(client_ip(request)):
+        raise HTTPException(status_code=429, detail="Too many messages. Please wait a minute.")
+    history = [Turn(role=t.role, content=t.content[:2000]) for t in body.history[-6:]]
+    try:
+        result, tools_used = get_agent().answer(body.message.strip(), history)
+    except Exception:
+        log.exception("agent chat failed")
+        raise HTTPException(status_code=502, detail="The assistant is unavailable right now.") from None
+    return AgentChatResponse(
+        answer=result.answer,
+        sources=[Source(**s) for s in result.sources],
+        urgent=result.urgent,
+        tools_used=tools_used,
+    )

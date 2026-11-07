@@ -47,6 +47,22 @@ flowchart LR
 | Generation | System prompt with clinic facts, numbered passages, last 6 chat turns, and a reply in the user's language | [`physiobot/prompts.py`](physiobot/prompts.py), [`physiobot/service.py`](physiobot/service.py) |
 | API | `POST /chat`, `GET /health`, CORS limited to the clinic site, per-IP rate limit | [`physiobot/api.py`](physiobot/api.py) |
 
+### Agent mode (experimental)
+
+`POST /agent/chat` runs a LangChain tool-calling agent instead of the fixed pipeline. Gemini decides which tools to
+call, up to 4 steps, then answers:
+
+| Tool | What it does |
+| --- | --- |
+| `search_textbook` | The same pgvector search, returning numbered passages; numbering continues across calls so citations stay unique |
+| `clinic_open_at` | Deterministic opening-hours check for a weekday and time (no model guessing) |
+| `clinic_facts` | One section of the clinic facts: treatments, booking, team, address, ... |
+
+Red-flag triage still runs first and skips the model, the tools are read-only, and unknown tools or tool errors are
+returned to the model as text instead of crashing. The endpoint returns `tools_used` so you can see the agent's path.
+It's off unless `AGENT_MODE=1`; the website keeps using `/chat`. Code: [`physiobot/agent.py`](physiobot/agent.py),
+tests: [`tests/test_agent.py`](tests/test_agent.py).
+
 ### What changed from the first prototype
 
 The first version lives on in [`NOTEBOOK/code.ipynb`](NOTEBOOK/code.ipynb). Moving it to production meant:
@@ -71,7 +87,7 @@ The first version lives on in [`NOTEBOOK/code.ipynb`](NOTEBOOK/code.ipynb). Movi
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements-dev.txt
 cp .env.example .env          # add your Gemini and Supabase keys
-pytest                        # 31 tests, no network needed
+pytest                        # 44 tests, no network needed
 uvicorn physiobot.api:app --reload
 ```
 

@@ -25,6 +25,7 @@ class Settings:
     min_similarity: float = 0.5
     allowed_origins: list[str] = field(default_factory=lambda: ["http://localhost:3000"])
     rate_limit_per_minute: int = 8
+    agent_mode: bool = False
 
 
 @lru_cache
@@ -41,4 +42,5 @@ def get_settings() -> Settings:
         min_similarity=float(env("MIN_SIMILARITY", str(Settings.min_similarity))),
         allowed_origins=_list(env("ALLOWED_ORIGINS", "http://localhost:3000")),
         rate_limit_per_minute=int(env("RATE_LIMIT_PER_MINUTE", str(Settings.rate_limit_per_minute))),
+        agent_mode=env("AGENT_MODE", "0").strip().lower() in {"1", "true", "yes"},
     )
