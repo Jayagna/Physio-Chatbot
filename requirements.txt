@@ -4,6 +4,8 @@ google-genai==2.33.0
 supabase==2.33.0
 python-dotenv>=1.0
 pydantic>=2.10
+langchain-core==1.7.6
+langchain-google-genai==4.4.3
 # Ingestion only
 pymupdf==2.0
 langchain-text-splitters==1.1.3

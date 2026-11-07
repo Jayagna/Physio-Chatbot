@@ -54,3 +54,23 @@ def test_rate_limiter_window():
     assert rl.allow("a", 0) and rl.allow("a", 1)
     assert not rl.allow("a", 2)
     assert rl.allow("a", 61.5)
+
+
+class StubAgent:
+    def answer(self, question, history):
+        return Answer(answer="Open 15:00-20:00."), ["clinic_open_at"]
+
+
+def test_agent_endpoint_is_off_by_default():
+    c = client_with(StubBot())
+    assert c.post("/agent/chat", json={"message": "open saturday?"}).status_code == 404
+
+
+def test_agent_endpoint_returns_tools_used(monkeypatch):
+    from dataclasses import replace
+
+    monkeypatch.setattr(api, "settings", replace(api.settings, agent_mode=True))
+    monkeypatch.setattr(api, "get_agent", lambda: StubAgent())
+    res = client_with(StubBot()).post("/agent/chat", json={"message": "open saturday?"})
+    assert res.status_code == 200
+    assert res.json()["tools_used"] == ["clinic_open_at"]
