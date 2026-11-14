@@ -27,3 +27,24 @@ def test_pending_chunks_skips_stored_and_respects_limit():
     todo = pending_chunks(chunks, done, limit=3)
     assert [c.index for c in todo] == [1, 3, 4]
     assert len(pending_chunks(chunks, set())) == len(chunks)
+
+
+def test_quota_day_starts_at_midnight_pacific():
+    from datetime import datetime, timezone
+
+    from physiobot.ingest import quota_day_start
+
+    # 06:30 UTC on 27 Oct is still 26 Oct in California (PDT, UTC-7).
+    start = quota_day_start(datetime(2026, 10, 27, 6, 30, tzinfo=timezone.utc))
+    assert start.astimezone(timezone.utc) == datetime(2026, 10, 26, 7, 0, tzinfo=timezone.utc)
+    start = quota_day_start(datetime(2026, 10, 27, 7, 30, tzinfo=timezone.utc))
+    assert start.astimezone(timezone.utc) == datetime(2026, 10, 27, 7, 0, tzinfo=timezone.utc)
+
+
+def test_second_run_on_same_quota_day_only_uses_what_is_left():
+    from physiobot.ingest import remaining_budget
+
+    assert remaining_budget(800, 0) == 800
+    assert remaining_budget(800, 800) == 0
+    assert remaining_budget(800, 950) == 0
+    assert remaining_budget(None, 500) is None
